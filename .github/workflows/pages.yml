@@ -1,12 +1,13 @@
 name: Deploy GitHub Pages
 
-# Re-trigger: the first run failed because it happened before Settings > Pages
-# was set to "GitHub Actions" as the source.
+# Pages only ever deploys from the default branch (main) — the github-pages
+# environment restricts deployments to it anyway, and triggering from other
+# branches too just races the same "pages" concurrency group and cancels the
+# real deploy.
 on:
   push:
     branches:
       - main
-      - claude/pwa-yandex-push-ios-72iyfl
     paths:
       - "public/**"
       - ".github/workflows/pages.yml"
