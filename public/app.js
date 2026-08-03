@@ -21,13 +21,27 @@ const els = {
   subWrap: document.getElementById('sub-wrap'),
   subJson: document.getElementById('sub-json'),
   vapid: document.getElementById('f-vapid'),
+  vapidPrivate: document.getElementById('f-vapid-private'),
+  keyWarn: document.getElementById('key-warn'),
   cmd: document.getElementById('cmd'),
   cmdNote: document.getElementById('cmd-note'),
   log: document.getElementById('log'),
 };
 
 const VAPID_STORAGE_KEY = 'ybwp-vapid-public-key';
+const VAPID_PRIVATE_STORAGE_KEY = 'ybwp-vapid-private-key';
 const PRIVATE_KEY_PLACEHOLDER = 'ВСТАВЬ_СЮДА_PRIVATE_KEY';
+
+// web-push rejects anything that isn't unpadded base64url. The output of
+// `generate-vapid-keys` is fenced by "=====" lines, which are very easy to
+// catch while copying — and a stray "=" is exactly what trips the check.
+function checkKeyFormat(value, expectedLength, label) {
+  if (!value) return null;
+  if (value.includes('=')) return `${label}: содержит «=» — похоже, зацепил рамку из «=====» при копировании.`;
+  if (!/^[A-Za-z0-9_-]+$/.test(value)) return `${label}: есть посторонние символы, ожидается base64url.`;
+  if (value.length !== expectedLength) return `${label}: длина ${value.length}, ожидается ${expectedLength}.`;
+  return null;
+}
 
 let swRegistration = null;
 let currentSubscription = null;
@@ -95,6 +109,14 @@ function buildCommand() {
     return;
   }
 
+  const vapidPrivate = els.vapidPrivate.value.trim();
+  const warnings = [
+    checkKeyFormat(vapidPublic, 87, 'public key'),
+    checkKeyFormat(vapidPrivate, 43, 'private key'),
+  ].filter(Boolean);
+  els.keyWarn.textContent = warnings.join(' ');
+  els.keyWarn.style.color = warnings.length ? '#f7a3ab' : '';
+
   const json = currentSubscription.toJSON();
   const lines = [
     'npx web-push send-notification',
@@ -103,7 +125,7 @@ function buildCommand() {
     `  --auth=${shellQuote(json.keys.auth)}`,
     `  --vapid-subject=${shellQuote('mailto:test@example.com')}`,
     `  --vapid-pubkey=${shellQuote(vapidPublic)}`,
-    `  --vapid-pvtkey=${shellQuote(PRIVATE_KEY_PLACEHOLDER)}`,
+    `  --vapid-pvtkey=${shellQuote(vapidPrivate || PRIVATE_KEY_PLACEHOLDER)}`,
     `  --payload=${shellQuote(payload)}`,
   ];
   els.cmd.textContent = lines.join(' \\\n');
@@ -254,6 +276,10 @@ function escapeHtml(s) {
 
 async function init() {
   els.vapid.value = localStorage.getItem(VAPID_STORAGE_KEY) || '';
+  els.vapidPrivate.value = localStorage.getItem(VAPID_PRIVATE_STORAGE_KEY) || '';
+  els.vapidPrivate.addEventListener('input', () => {
+    localStorage.setItem(VAPID_PRIVATE_STORAGE_KEY, els.vapidPrivate.value.trim());
+  });
   if ('serviceWorker' in navigator) {
     swRegistration = await navigator.serviceWorker.register('./sw.js');
     await navigator.serviceWorker.ready;
@@ -269,7 +295,7 @@ document.getElementById('btn-share-cmd').addEventListener('click', () => shareCo
 document.getElementById('btn-refresh-log').addEventListener('click', () => refreshLog());
 document.getElementById('btn-clear-log').addEventListener('click', () => clearLogs().then(refreshLog));
 
-for (const id of ['f-title', 'f-body', 'f-url', 'f-deeplink', 'f-use-deeplink', 'f-mode', 'f-payload-type', 'f-vapid']) {
+for (const id of ['f-title', 'f-body', 'f-url', 'f-deeplink', 'f-use-deeplink', 'f-mode', 'f-payload-type', 'f-vapid', 'f-vapid-private']) {
   document.getElementById(id).addEventListener('input', buildCommand);
   document.getElementById(id).addEventListener('change', buildCommand);
 }
