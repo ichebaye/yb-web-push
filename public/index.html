@@ -141,7 +141,10 @@
       <option value="declarative" selected>Декларативный (web_push: 8030) — браузер сам идёт по navigate, JS не участвует</option>
       <option value="legacy">Классический — payload разбирает service worker, тап ловит notificationclick</option>
     </select>
-    <p class="sub">Скопируй команду ниже и выполни на ноуте, где лежит приватный ключ (подставь его вместо плейсхолдера). Затем сверни PWA или заблокируй телефон и дождись пуша.</p>
+    <label>VAPID private key (необязательно — чтобы команда была готова целиком)</label>
+    <input type="text" id="f-vapid-private" placeholder="43 символа; оставь пустым — будет плейсхолдер" />
+    <p class="sub" id="key-warn"></p>
+    <p class="sub">Скопируй команду ниже и выполни на ноуте. Затем сверни PWA или заблокируй телефон и дождись пуша.</p>
     <pre class="blob" id="cmd"></pre>
     <div class="row">
       <button id="btn-copy-cmd">Скопировать команду</button>

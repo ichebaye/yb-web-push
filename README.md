@@ -93,7 +93,16 @@ so the form lets you try variants without redeploying.
 npx web-push generate-vapid-keys
 ```
 
-Keep the private key there — it never goes into the repo or the phone.
+The public key is 87 characters, the private one 43, both unpadded base64url.
+Note that the command fences its output with `=====` lines — catching one of
+those while copying produces `Vapid private key must be a URL safe Base 64
+(without "=")`. The key fields in the app flag that (and a wrong length, and a
+swapped pair) before you get as far as running anything.
+
+Pasting the private key into the app is optional: leave it empty and the
+generated command carries a placeholder to substitute by hand instead. It is
+only ever used to fill in the command text — the app has no backend to send it
+to.
 
 **On the iPhone:**
 
@@ -105,8 +114,9 @@ Keep the private key there — it never goes into the repo or the phone.
 5. Set the notification params (section 3) and pick a payload type (section 4).
 6. Tap **«Поделиться (AirDrop)»** to send the generated command to your laptop.
 
-**Back on the laptop:** paste the command, replace `ВСТАВЬ_СЮДА_PRIVATE_KEY`
-with the private key, and run it. Then background the PWA (or lock the phone)
+**Back on the laptop:** paste the command and run it (substituting
+`ВСТАВЬ_СЮДА_PRIVATE_KEY` first, if you left the private key field empty).
+Then background the PWA (or lock the phone)
 — on iOS `notificationclick` may not fire reliably while the app is in the
 foreground — and tap the notification when it arrives.
 
