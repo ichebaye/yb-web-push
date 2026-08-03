@@ -66,28 +66,55 @@
   .log-entry .ev { color: #7ea2ff; }
   .log-entry .ts { color: #6b7394; }
   a { color: #8fb3ff; }
+  pre.blob {
+    background: #0f1526;
+    border: 1px solid #303a63;
+    border-radius: 8px;
+    padding: 10px;
+    font-family: ui-monospace, monospace;
+    font-size: 0.7rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 220px;
+    overflow-y: auto;
+    -webkit-user-select: all;
+    user-select: all;
+  }
+  .hint { color: #f7d38e; font-size: 0.82rem; }
 </style>
 </head>
 <body>
   <h1>YB Web Push Test</h1>
-  <p class="sub">Минимальный стенд (статика, без сервера — можно хостить на GitHub Pages): установленное iOS PWA показывает локальное уведомление, а тап по нему пытается передать управление в Яндекс.Браузер по deep link'у.</p>
+  <p class="sub">Стенд для проверки: может ли тап по пушу на iOS увести не в Safari/PWA, а в Яндекс.Браузер по deep link'у. Сайт полностью статический (GitHub Pages), настоящий push отправляется разовой командой с ноутбука — сервер не нужен.</p>
 
   <section>
     <h2>1. Статус</h2>
     <div class="status-line"><span>Standalone (установлено на экран)</span><span id="st-standalone">…</span></div>
     <div class="status-line"><span>Service Worker</span><span id="st-sw">…</span></div>
     <div class="status-line"><span>Notification permission</span><span id="st-permission">…</span></div>
-    <div id="ios-hint" style="display:none; margin-top:10px; font-size:0.85rem; color:#f7d38e;">
-      Открой этот сайт в Safari и добавь на экран «Домой» (Поделиться → «На экран Домой»), затем запусти приложение с экрана «Домой» — на iOS уведомления от service worker'а показываются только для установленного PWA.
-    </div>
-    <div class="row">
-      <button id="btn-permission">Запросить разрешение на уведомления</button>
+    <div class="status-line"><span>Push подписка</span><span id="st-sub">…</span></div>
+    <div id="ios-hint" style="display:none; margin-top:10px;" class="hint">
+      Открой этот сайт в Safari и добавь на экран «Домой» (Поделиться → «На экран Домой»), затем запусти приложение с экрана «Домой» — на iOS push и уведомления работают только для установленного PWA.
     </div>
   </section>
 
   <section>
-    <h2>2. Показать тестовое уведомление</h2>
-    <p class="sub">Уведомление показывается локально, через <code>registration.showNotification()</code> — без сервера и без реального push. <code>notificationclick</code> срабатывает одинаково независимо от того, как уведомление появилось, так что для проверки самого перехода в Яндекс.Браузер серверная доставка не нужна.</p>
+    <h2>2. Подписка на push</h2>
+    <p class="sub">Ключи генерируешь у себя на ноуте: <code>npx web-push generate-vapid-keys</code>. Приватный остаётся там же и никуда отсюда не уходит — сюда вставляешь только публичный.</p>
+    <label>VAPID public key</label>
+    <input type="text" id="f-vapid" placeholder="BM...публичный ключ..." />
+    <div class="row">
+      <button id="btn-subscribe">Подписаться</button>
+      <button id="btn-unsubscribe" class="secondary">Отписаться</button>
+    </div>
+    <div id="sub-wrap" style="display:none;">
+      <label>Subscription (эти данные нужны команде отправки)</label>
+      <pre class="blob" id="sub-json"></pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>3. Параметры уведомления</h2>
     <label>Заголовок</label>
     <input type="text" id="f-title" value="Тест deep link" />
     <label>Текст</label>
@@ -100,19 +127,40 @@
       <input type="checkbox" id="f-use-deeplink" checked />
       <label style="margin:0;" for="f-use-deeplink">Пробовать deep link в Яндекс.Браузер</label>
     </div>
-    <label>Режим обработки тапа (в service worker)</label>
+    <label>Режим обработки тапа (только для классического payload)</label>
     <select id="f-mode">
       <option value="redirect" selected>redirect — открыть свою HTTPS-страницу, она делает location.href=deeplink + fallback по таймеру</option>
       <option value="direct">direct — service worker сразу вызывает clients.openWindow(deeplink)</option>
     </select>
-    <div class="row">
-      <button id="btn-show">Показать уведомление</button>
-    </div>
-    <p class="sub">После показа сверни приложение (или заблокируй телефон) и тапни по уведомлению — при активном экране notificationclick на iOS может не сработать.</p>
   </section>
 
   <section>
-    <h2>3. Лог событий (IndexedDB)</h2>
+    <h2>4. Отправка настоящего push</h2>
+    <label>Тип payload</label>
+    <select id="f-payload-type">
+      <option value="declarative" selected>Декларативный (web_push: 8030) — браузер сам идёт по navigate, JS не участвует</option>
+      <option value="legacy">Классический — payload разбирает service worker, тап ловит notificationclick</option>
+    </select>
+    <p class="sub">Скопируй команду ниже и выполни на ноуте, где лежит приватный ключ (подставь его вместо плейсхолдера). Затем сверни PWA или заблокируй телефон и дождись пуша.</p>
+    <pre class="blob" id="cmd"></pre>
+    <div class="row">
+      <button id="btn-copy-cmd">Скопировать команду</button>
+      <button id="btn-share-cmd" class="secondary">Поделиться (AirDrop)</button>
+    </div>
+    <p class="sub" id="cmd-note"></p>
+  </section>
+
+  <section>
+    <h2>5. Локальная проверка (без push)</h2>
+    <p class="sub">Быстрый способ проверить только сам переход по тапу: уведомление показывается через <code>registration.showNotification()</code>, а дальше срабатывает тот же <code>notificationclick</code>. Это всегда классический (императивный) путь — декларативный так не воспроизвести.</p>
+    <div class="row">
+      <button id="btn-show" class="secondary">Показать уведомление локально</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>6. Лог событий (IndexedDB)</h2>
+    <p class="sub"><b>Как читать:</b> если в логе есть <code>push-received</code> — Safari не распознал декларативный формат и свалился в обычный, императивный путь. Если сразу <code>redirect-page-loaded</code> без <code>push-received</code> и <code>notificationclick</code> — сработал именно декларативный путь.</p>
     <p class="sub">Service worker и redirect-страница пишут сюда диагностику вместо похода на сервер, потому что после открытия стороннего браузера JS-контекст PWA пропадает — а локальная база остаётся и читается при следующем открытии.</p>
     <div class="row">
       <button id="btn-refresh-log" class="secondary">Обновить</button>
