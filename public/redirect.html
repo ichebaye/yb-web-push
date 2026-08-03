@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Открываем…</title>
+<style>
+  body {
+    font-family: -apple-system, system-ui, sans-serif;
+    background: #12182b;
+    color: #eef1f8;
+    margin: 0;
+    padding: 24px 16px;
+    text-align: center;
+  }
+  .card { max-width: 420px; margin: 40px auto; }
+  a.btn {
+    display: block;
+    margin: 14px 0;
+    padding: 12px;
+    border-radius: 10px;
+    background: #4a6cf7;
+    color: white;
+    text-decoration: none;
+    font-size: 0.95rem;
+  }
+  a.btn.secondary { background: #303a63; }
+  p { color: #9aa4c0; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h2 id="status-text">Открываем…</h2>
+    <p>Эта страница — обязательный HTTPS-переход: <code>clients.openWindow()</code> из service worker'а надёжно открывает только http(s) адреса, поэтому сам deep link пробуем отсюда, обычной навигацией страницы (плюс кнопки ниже — на случай, если программный переход заблокирован как не-user-gesture).</p>
+    <a class="btn" id="manual-deep-link" style="display:none;">Открыть в Яндекс.Браузере (вручную)</a>
+    <a class="btn secondary" id="manual-fallback">Продолжить по обычной ссылке</a>
+  </div>
+  <script src="/redirect.js"></script>
+</body>
+</html>

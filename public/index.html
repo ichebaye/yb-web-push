@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>YB Web Push Test</title>
+<link rel="manifest" href="/manifest.webmanifest" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#1f2a44" />
+<style>
+  :root { color-scheme: dark; }
+  body {
+    font-family: -apple-system, system-ui, sans-serif;
+    background: #12182b;
+    color: #eef1f8;
+    margin: 0;
+    padding: 16px 16px 48px;
+    max-width: 640px;
+    margin-inline: auto;
+  }
+  h1 { font-size: 1.25rem; margin-bottom: 4px; }
+  .sub { color: #9aa4c0; font-size: 0.85rem; margin-top: 0; }
+  section {
+    background: #1b2340;
+    border: 1px solid #2a335a;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+  }
+  section h2 { font-size: 0.95rem; margin: 0 0 10px; color: #c9d1f0; }
+  label { display: block; font-size: 0.8rem; color: #9aa4c0; margin: 10px 0 4px; }
+  input[type=text], textarea {
+    width: 100%;
+    box-sizing: border-box;
+    background: #0f1526;
+    border: 1px solid #303a63;
+    color: #eef1f8;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .checkrow { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.85rem; }
+  select { background: #0f1526; color: #eef1f8; border: 1px solid #303a63; border-radius: 8px; padding: 8px; }
+  button {
+    background: #4a6cf7;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 14px;
+    font-size: 0.9rem;
+    margin-top: 10px;
+    cursor: pointer;
+  }
+  button.secondary { background: #303a63; }
+  button:disabled { opacity: 0.5; }
+  .status-line { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 3px 0; border-bottom: 1px dashed #2a335a; }
+  .status-line span:last-child { color: #9aa4c0; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.75rem; }
+  .pill.ok { background: #16532c; color: #8ef0ab; }
+  .pill.bad { background: #5a1f24; color: #f7a3ab; }
+  #log { max-height: 320px; overflow-y: auto; font-family: ui-monospace, monospace; font-size: 0.72rem; white-space: pre-wrap; }
+  .log-entry { border-bottom: 1px solid #23294a; padding: 6px 0; }
+  .log-entry .ev { color: #7ea2ff; }
+  .log-entry .ts { color: #6b7394; }
+  a { color: #8fb3ff; }
+</style>
+</head>
+<body>
+  <h1>YB Web Push Test</h1>
+  <p class="sub">Минимальный стенд: iOS PWA + Web Push → по тапу на пуш пытаемся передать управление в Яндекс.Браузер по deep link'у.</p>
+
+  <section>
+    <h2>1. Статус</h2>
+    <div class="status-line"><span>Standalone (установлено на экран)</span><span id="st-standalone">…</span></div>
+    <div class="status-line"><span>Service Worker</span><span id="st-sw">…</span></div>
+    <div class="status-line"><span>Notification permission</span><span id="st-permission">…</span></div>
+    <div class="status-line"><span>Push подписка</span><span id="st-sub">…</span></div>
+    <div id="ios-hint" style="display:none; margin-top:10px; font-size:0.85rem; color:#f7d38e;">
+      Открой этот сайт в Safari и добавь на экран «Домой» (Поделиться → «На экран Домой»), затем запусти приложение с экрана «Домой» — веб-пуш на iOS работает только для установленного PWA.
+    </div>
+    <div class="row">
+      <button id="btn-subscribe">Подписаться на push</button>
+      <button id="btn-unsubscribe" class="secondary">Отписаться</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Отправить тестовый пуш</h2>
+    <label>Заголовок</label>
+    <input type="text" id="f-title" value="Тест deep link" />
+    <label>Текст</label>
+    <input type="text" id="f-body" value="Тап должен открыть сайт в Яндекс.Браузере" />
+    <label>Целевой URL (куда в итоге должны попасть)</label>
+    <input type="text" id="f-url" value="https://ya.ru" />
+    <label>Шаблон deep link (плейсхолдер {url} заменится на целевой URL)</label>
+    <input type="text" id="f-deeplink" value="yandexbrowser-open-url://{url}" />
+    <div class="checkrow">
+      <input type="checkbox" id="f-use-deeplink" checked />
+      <label style="margin:0;" for="f-use-deeplink">Пробовать deep link в Яндекс.Браузер</label>
+    </div>
+    <label>Режим обработки тапа (в service worker)</label>
+    <select id="f-mode">
+      <option value="redirect" selected>redirect — открыть свою HTTPS-страницу, она делает location.href=deeplink + fallback по таймеру</option>
+      <option value="direct">direct — service worker сразу вызывает clients.openWindow(deeplink)</option>
+    </select>
+    <div class="row">
+      <button id="btn-send">Отправить себе push</button>
+    </div>
+    <p class="sub" id="send-result"></p>
+  </section>
+
+  <section>
+    <h2>3. Лог событий (с сервера)</h2>
+    <p class="sub">Сервис-воркер и redirect-страница шлют сюда диагностику через fetch, потому что после открытия стороннего браузера JS-контекст PWA пропадает и посмотреть консоль будет нельзя.</p>
+    <div class="row">
+      <button id="btn-refresh-log" class="secondary">Обновить</button>
+      <button id="btn-clear-log" class="secondary">Очистить</button>
+    </div>
+    <div id="log"></div>
+  </section>
+
+  <script src="/app.js"></script>
+</body>
+</html>

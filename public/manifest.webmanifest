@@ -1,0 +1,14 @@
+{
+  "name": "YB Web Push Test",
+  "short_name": "YB Push",
+  "description": "Test rig for iOS web push that hands off notification taps to Yandex Browser",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1f2a44",
+  "theme_color": "#1f2a44",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
