@@ -25,23 +25,38 @@ self.addEventListener('push', (event) => {
     data = { title: 'Push', body: event.data ? event.data.text() : '' };
   }
 
-  const title = data.title || 'Test push';
+  // Reaching this handler at all is a result in itself: a payload that WebKit
+  // parsed as declarative is shown by the platform and never wakes the worker.
+  // If one does land here, its fields live under `notification`, and `navigate`
+  // already points at redirect.html — so it doubles as the click target.
+  const wasDeclarative = data && data.web_push === 8030;
+  const source = wasDeclarative ? data.notification || {} : data;
+
+  const title = source.title || 'Test push';
   const options = {
-    body: data.body || '',
+    body: source.body || '',
     icon: './icons/icon-192.png',
     badge: './icons/badge-96.png',
     data: {
-      url: data.url || './',
-      deepLink: data.deepLink || null,
-      useYandexDeepLink: !!data.useYandexDeepLink,
-      mode: data.mode || 'redirect',
+      url: (wasDeclarative ? source.navigate : data.url) || './',
+      deepLink: wasDeclarative ? null : data.deepLink || null,
+      useYandexDeepLink: wasDeclarative ? false : !!data.useYandexDeepLink,
+      // `navigate` is already a full redirect.html URL, so open it verbatim
+      // instead of wrapping it in another redirect hop.
+      mode: wasDeclarative ? 'raw' : data.mode || 'redirect',
     },
   };
 
   event.waitUntil(
     Promise.all([
       self.registration.showNotification(title, options),
-      addLog({ event: 'push-received', data: options.data }),
+      addLog({
+        event: 'push-received',
+        note: wasDeclarative
+          ? 'declarative payload reached the SW — it was NOT handled declaratively'
+          : 'classic payload handled by the service worker',
+        data: options.data,
+      }),
     ])
   );
 });
@@ -55,6 +70,16 @@ self.addEventListener('notificationclick', (event) => {
 
   const work = (async () => {
     await addLog({ event: 'notificationclick', mode: data.mode, targetUrl, deepLink });
+
+    if (data.mode === 'raw') {
+      try {
+        const client = await clients.openWindow(targetUrl);
+        await addLog({ event: 'openWindow-raw-result', opened: !!client, targetUrl });
+      } catch (err) {
+        await addLog({ event: 'openWindow-raw-error', message: String(err), targetUrl });
+      }
+      return;
+    }
 
     if (data.mode === 'direct' && deepLink) {
       try {
