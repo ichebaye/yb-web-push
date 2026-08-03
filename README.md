@@ -12,12 +12,12 @@ running to send a push.
 ## Why this is genuinely uncertain
 
 - Apple's [Declarative Web Push](https://webkit.org/blog/16535/meet-declarative-web-push/)
-  is built around a `navigate` URL that the browser opens itself. The
-  [WebKit explainer](https://github.com/WebKit/explainers/blob/main/DeclarativeWebPush/README.md)
-  frames it as *"Navigating the user agent to HTTP URLs is the native language
-  of the web platform"* — custom schemes are not mentioned, and declarative
-  notifications *"always skip the `notificationclick` handler"*, so there is no
-  JS hook at all on the declarative path.
+  is built around a `navigate` URL that the browser opens itself, and
+  declarative notifications *"always skip the `notificationclick` handler"*
+  ([WebKit explainer](https://github.com/WebKit/explainers/blob/main/DeclarativeWebPush/README.md)),
+  so there is no JS hook at all on the declarative path. Neither the explainer
+  nor the Notifications spec restricts that URL's scheme, which leaves whether
+  a custom scheme is dispatched entirely up to the implementation.
 - `clients.openWindow()` inside a service worker has documented bugs on iOS
   even for plain same-origin paths (see Apple dev forum threads on
   "Issue with PWA Push Notifications: Unable to Redirect to Specified URL on iOS").
@@ -139,19 +139,38 @@ classic path; the declarative one can't be reproduced without a real push.
 
 ## Findings so far
 
-**A custom scheme in `navigate` is ignored.** Sending
-`"navigate": "yandexbrowser-open-url://…"` in a declarative payload does not
-launch Yandex Browser and does not fail visibly — iOS opens the PWA at its
-`start_url` instead. This matches how the explainer frames the field
-(*"Navigating the user agent to HTTP URLs is the native language of the web
-platform"*): `navigate` is for HTTP(S), and anything else falls back to just
-opening the app.
+**A custom scheme in `navigate` is ignored — but no spec says it has to be.**
+Sending `"navigate": "yandexbrowser-open-url://…"` in a declarative payload
+does not launch Yandex Browser and does not fail visibly: iOS opens the PWA at
+its `start_url` instead.
 
-This is unsurprising in hindsight: if `navigate` accepted arbitrary schemes,
-any site holding notification permission could launch third-party apps with no
-user interaction. So **"tap the notification, land in Yandex Browser, with
-nothing of ours running in between" is almost certainly not reachable** —
-something of yours has to execute to trigger a scheme switch, which is what
+It is worth being precise about *why*, because the specs do not forbid this
+payload. The WebKit explainer places no restriction on the URL at all (only
+that the field "represents the url that the user agent **should** load"). The
+member itself is defined in
+[WHATWG Notifications](https://notifications.spec.whatwg.org/), where the only
+requirement is that it parse:
+
+> "If options\["navigate"] exists, then parse it using baseURL, and if that
+> does not return failure, set notification's navigation URL to the return
+> value."
+
+`yandexbrowser-open-url://https://ya.ru` parses fine — a custom scheme with an
+opaque path is a perfectly valid URL — so the navigation URL does get set. And
+activation is explicitly left open:
+
+> "Select one of the following two options **in an implementation-defined
+> manner**: Navigate an existing top-level traversable … to navigationURL, or
+> Create a fresh top-level traversable given navigationURL."
+
+From there it is HTML's navigation to a non-fetch scheme, which is likewise
+implementation-defined: the user agent *may* hand it to the OS, or may do
+nothing. So the observed fallback is **a WebKit behavior, not a standards
+requirement** — it could differ across iOS versions, and is arguably worth
+filing as a bug rather than treated as settled.
+
+Practically, though, it means the hand-off can't currently skip our own code:
+something of ours has to run to trigger the scheme switch, which is what
 `redirect.html` is for.
 
 What remains genuinely open is whether the scheme survives *any* context on the
