@@ -1,5 +1,7 @@
 name: Deploy GitHub Pages
 
+# Re-trigger: the first run failed because it happened before Settings > Pages
+# was set to "GitHub Actions" as the source.
 on:
   push:
     branches:
