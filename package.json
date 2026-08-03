@@ -2,14 +2,9 @@
   "name": "yb-web-push",
   "private": true,
   "version": "0.1.0",
-  "description": "Minimal test rig: installable iOS PWA + web push that tries to hand the notification tap off to Yandex Browser via its deep-link URL scheme.",
-  "main": "server.js",
+  "description": "Minimal static test rig: installable iOS PWA that tries to hand a notification tap off to Yandex Browser via its deep-link URL scheme.",
   "scripts": {
-    "start": "node server.js",
-    "generate-icons": "node scripts/generate-icons.js"
-  },
-  "dependencies": {
-    "express": "^4.19.2",
-    "web-push": "^3.6.7"
+    "generate-icons": "node scripts/generate-icons.js",
+    "serve": "npx --yes http-server public -p 3000"
   }
 }

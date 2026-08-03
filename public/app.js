@@ -1,18 +1,9 @@
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = atob(base64);
-  return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
-}
-
 const els = {
   standalone: document.getElementById('st-standalone'),
   sw: document.getElementById('st-sw'),
   permission: document.getElementById('st-permission'),
-  sub: document.getElementById('st-sub'),
   iosHint: document.getElementById('ios-hint'),
   log: document.getElementById('log'),
-  sendResult: document.getElementById('send-result'),
 };
 
 function pill(ok, text) {
@@ -21,7 +12,7 @@ function pill(ok, text) {
 
 let swRegistration = null;
 
-async function refreshStatus() {
+function refreshStatus() {
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   els.standalone.innerHTML = pill(isStandalone, isStandalone ? 'да' : 'нет');
   els.iosHint.style.display = isStandalone ? 'none' : 'block';
@@ -31,58 +22,27 @@ async function refreshStatus() {
 
   const perm = 'Notification' in window ? Notification.permission : 'unsupported';
   els.permission.innerHTML = pill(perm === 'granted', perm);
-
-  if (swRegistration && swRegistration.pushManager) {
-    const sub = await swRegistration.pushManager.getSubscription();
-    els.sub.innerHTML = sub ? pill(true, 'активна') : pill(false, 'нет');
-  } else {
-    els.sub.innerHTML = pill(false, 'PushManager недоступен');
-  }
 }
 
 async function init() {
   if ('serviceWorker' in navigator) {
-    swRegistration = await navigator.serviceWorker.register('/sw.js');
+    swRegistration = await navigator.serviceWorker.register('./sw.js');
     await navigator.serviceWorker.ready;
   }
-  await refreshStatus();
+  refreshStatus();
 }
 
-async function subscribe() {
-  if (!swRegistration) return alert('Service worker не зарегистрирован');
+async function requestPermission() {
+  if (!('Notification' in window)) return alert('Notification API недоступен в этом браузере');
   const permission = await Notification.requestPermission();
-  if (permission !== 'granted') {
-    await refreshStatus();
-    return alert('Разрешение на уведомления не выдано');
-  }
-  const { publicKey } = await fetch('/api/vapid-public-key').then((r) => r.json());
-  const sub = await swRegistration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(publicKey),
-  });
-  await fetch('/api/subscribe', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(sub),
-  });
-  await refreshStatus();
+  refreshStatus();
+  if (permission !== 'granted') alert('Разрешение на уведомления не выдано');
 }
 
-async function unsubscribe() {
-  if (!swRegistration) return;
-  const sub = await swRegistration.pushManager.getSubscription();
-  if (sub) {
-    await fetch('/api/unsubscribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ endpoint: sub.endpoint }),
-    });
-    await sub.unsubscribe();
-  }
-  await refreshStatus();
-}
+async function showTestNotification() {
+  if (!swRegistration) return alert('Service worker не зарегистрирован');
+  if (Notification.permission !== 'granted') return alert('Сначала запроси разрешение на уведомления');
 
-async function sendTest() {
   const title = document.getElementById('f-title').value;
   const body = document.getElementById('f-body').value;
   const url = document.getElementById('f-url').value;
@@ -92,23 +52,21 @@ async function sendTest() {
 
   const deepLink = useYandexDeepLink ? deepLinkTemplate.replace('{url}', url) : null;
 
-  const res = await fetch('/api/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, body, url, useYandexDeepLink, deepLink, mode }),
-  }).then((r) => r.json());
+  await addLog({ event: 'local-notification-requested', title, body, url, deepLink, mode });
 
-  els.sendResult.textContent = `sent: ${res.sent || 0}, failed: ${res.failed || 0}, error: ${res.error || '-'}`;
+  await swRegistration.showNotification(title, {
+    body,
+    icon: './icons/icon-192.png',
+    badge: './icons/badge-96.png',
+    data: { url, deepLink, useYandexDeepLink, mode },
+  });
 }
 
 async function refreshLog() {
-  const { logs } = await fetch('/api/logs').then((r) => r.json());
+  const logs = await getLogs();
   els.log.innerHTML = logs
     .map(
-      (l) =>
-        `<div class="log-entry"><span class="ts">${l.receivedAt}</span> <span class="ev">${l.event}</span><br>${escapeHtml(
-          JSON.stringify(l)
-        )}</div>`
+      (l) => `<div class="log-entry"><span class="ts">${l.ts}</span> <span class="ev">${l.event}</span><br>${escapeHtml(JSON.stringify(l))}</div>`
     )
     .join('');
 }
@@ -117,11 +75,10 @@ function escapeHtml(s) {
   return s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 }
 
-document.getElementById('btn-subscribe').addEventListener('click', () => subscribe().catch((e) => alert(e.message)));
-document.getElementById('btn-unsubscribe').addEventListener('click', () => unsubscribe().catch((e) => alert(e.message)));
-document.getElementById('btn-send').addEventListener('click', () => sendTest().catch((e) => alert(e.message)));
+document.getElementById('btn-permission').addEventListener('click', () => requestPermission().catch((e) => alert(e.message)));
+document.getElementById('btn-show').addEventListener('click', () => showTestNotification().catch((e) => alert(e.message)));
 document.getElementById('btn-refresh-log').addEventListener('click', () => refreshLog());
-document.getElementById('btn-clear-log').addEventListener('click', () => fetch('/api/logs/clear', { method: 'POST' }).then(refreshLog));
+document.getElementById('btn-clear-log').addEventListener('click', () => clearLogs().then(refreshLog));
 
 init();
 refreshLog();

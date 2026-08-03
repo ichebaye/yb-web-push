@@ -4,8 +4,8 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>YB Web Push Test</title>
-<link rel="manifest" href="/manifest.webmanifest" />
-<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="theme-color" content="#1f2a44" />
@@ -70,25 +70,24 @@
 </head>
 <body>
   <h1>YB Web Push Test</h1>
-  <p class="sub">Минимальный стенд: iOS PWA + Web Push → по тапу на пуш пытаемся передать управление в Яндекс.Браузер по deep link'у.</p>
+  <p class="sub">Минимальный стенд (статика, без сервера — можно хостить на GitHub Pages): установленное iOS PWA показывает локальное уведомление, а тап по нему пытается передать управление в Яндекс.Браузер по deep link'у.</p>
 
   <section>
     <h2>1. Статус</h2>
     <div class="status-line"><span>Standalone (установлено на экран)</span><span id="st-standalone">…</span></div>
     <div class="status-line"><span>Service Worker</span><span id="st-sw">…</span></div>
     <div class="status-line"><span>Notification permission</span><span id="st-permission">…</span></div>
-    <div class="status-line"><span>Push подписка</span><span id="st-sub">…</span></div>
     <div id="ios-hint" style="display:none; margin-top:10px; font-size:0.85rem; color:#f7d38e;">
-      Открой этот сайт в Safari и добавь на экран «Домой» (Поделиться → «На экран Домой»), затем запусти приложение с экрана «Домой» — веб-пуш на iOS работает только для установленного PWA.
+      Открой этот сайт в Safari и добавь на экран «Домой» (Поделиться → «На экран Домой»), затем запусти приложение с экрана «Домой» — на iOS уведомления от service worker'а показываются только для установленного PWA.
     </div>
     <div class="row">
-      <button id="btn-subscribe">Подписаться на push</button>
-      <button id="btn-unsubscribe" class="secondary">Отписаться</button>
+      <button id="btn-permission">Запросить разрешение на уведомления</button>
     </div>
   </section>
 
   <section>
-    <h2>2. Отправить тестовый пуш</h2>
+    <h2>2. Показать тестовое уведомление</h2>
+    <p class="sub">Уведомление показывается локально, через <code>registration.showNotification()</code> — без сервера и без реального push. <code>notificationclick</code> срабатывает одинаково независимо от того, как уведомление появилось, так что для проверки самого перехода в Яндекс.Браузер серверная доставка не нужна.</p>
     <label>Заголовок</label>
     <input type="text" id="f-title" value="Тест deep link" />
     <label>Текст</label>
@@ -107,14 +106,14 @@
       <option value="direct">direct — service worker сразу вызывает clients.openWindow(deeplink)</option>
     </select>
     <div class="row">
-      <button id="btn-send">Отправить себе push</button>
+      <button id="btn-show">Показать уведомление</button>
     </div>
-    <p class="sub" id="send-result"></p>
+    <p class="sub">После показа сверни приложение (или заблокируй телефон) и тапни по уведомлению — при активном экране notificationclick на iOS может не сработать.</p>
   </section>
 
   <section>
-    <h2>3. Лог событий (с сервера)</h2>
-    <p class="sub">Сервис-воркер и redirect-страница шлют сюда диагностику через fetch, потому что после открытия стороннего браузера JS-контекст PWA пропадает и посмотреть консоль будет нельзя.</p>
+    <h2>3. Лог событий (IndexedDB)</h2>
+    <p class="sub">Service worker и redirect-страница пишут сюда диагностику вместо похода на сервер, потому что после открытия стороннего браузера JS-контекст PWA пропадает — а локальная база остаётся и читается при следующем открытии.</p>
     <div class="row">
       <button id="btn-refresh-log" class="secondary">Обновить</button>
       <button id="btn-clear-log" class="secondary">Очистить</button>
@@ -122,6 +121,7 @@
     <div id="log"></div>
   </section>
 
-  <script src="/app.js"></script>
+  <script src="./log.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
