@@ -23,6 +23,7 @@ const els = {
   vapid: document.getElementById('f-vapid'),
   vapidPrivate: document.getElementById('f-vapid-private'),
   keyWarn: document.getElementById('key-warn'),
+  schemeTest: document.getElementById('scheme-test'),
   cmd: document.getElementById('cmd'),
   cmdNote: document.getElementById('cmd-note'),
   log: document.getElementById('log'),
@@ -102,6 +103,11 @@ function buildCommand() {
   const form = readForm();
   const payload = buildPayload(form);
   const vapidPublic = els.vapid.value.trim();
+
+  // A plain <a href> tap is the control case: it's the most permissive way iOS
+  // will ever dispatch a custom scheme, so if this doesn't work, nothing will.
+  els.schemeTest.href = form.deepLink || '#';
+
 
   if (!currentSubscription) {
     els.cmd.textContent = 'Сначала подпишись на push (раздел 2) — из подписки берутся endpoint и ключи.';

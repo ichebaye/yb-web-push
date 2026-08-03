@@ -137,6 +137,30 @@ There's also a **local notification** button (section 5) that skips push
 entirely — useful for iterating on the tap behavior alone. It's always the
 classic path; the declarative one can't be reproduced without a real push.
 
+## Findings so far
+
+**A custom scheme in `navigate` is ignored.** Sending
+`"navigate": "yandexbrowser-open-url://…"` in a declarative payload does not
+launch Yandex Browser and does not fail visibly — iOS opens the PWA at its
+`start_url` instead. This matches how the explainer frames the field
+(*"Navigating the user agent to HTTP URLs is the native language of the web
+platform"*): `navigate` is for HTTP(S), and anything else falls back to just
+opening the app.
+
+This is unsurprising in hindsight: if `navigate` accepted arbitrary schemes,
+any site holding notification permission could launch third-party apps with no
+user interaction. So **"tap the notification, land in Yandex Browser, with
+nothing of ours running in between" is almost certainly not reachable** —
+something of yours has to execute to trigger a scheme switch, which is what
+`redirect.html` is for.
+
+What remains genuinely open is whether the scheme survives *any* context on the
+device. The "тапнуть по deep link'у вручную" link on the main page is the
+control case — a plain `<a href>` tap, the most permissive dispatch iOS offers.
+If that doesn't open Yandex Browser, the scheme string (or the app's presence)
+is the problem, not push. If it does, then the remaining question is only
+whether a *programmatic* `location.href` counts as a user gesture.
+
 ## Expected outcomes (to record, not assumed)
 
 - If the log always ends in a fallback with no app-switch detected → custom
