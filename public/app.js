@@ -63,8 +63,14 @@ function absoluteUrl(relative) {
 function readForm() {
   const url = document.getElementById('f-url').value;
   const useDeepLink = document.getElementById('f-use-deeplink').checked;
+  // Yandex Browser expects the target URL percent-encoded after the scheme,
+  // so {encodedUrl} is the placeholder that actually produces a working link;
+  // {url} stays available for trying other spellings.
   const deepLink = useDeepLink
-    ? document.getElementById('f-deeplink').value.replace('{url}', url)
+    ? document
+        .getElementById('f-deeplink')
+        .value.replace('{encodedUrl}', encodeURIComponent(url))
+        .replace('{url}', url)
     : null;
   return {
     title: document.getElementById('f-title').value,

@@ -121,8 +121,8 @@
     <input type="text" id="f-body" value="Тап должен открыть сайт в Яндекс.Браузере" />
     <label>Целевой URL (куда в итоге должны попасть)</label>
     <input type="text" id="f-url" value="https://ya.ru" />
-    <label>Шаблон deep link (плейсхолдер {url} заменится на целевой URL)</label>
-    <input type="text" id="f-deeplink" value="yandexbrowser-open-url://{url}" />
+    <label>Шаблон deep link — <code>{encodedUrl}</code> подставит целевой URL percent-encoded (этого ждёт Яндекс.Браузер), <code>{url}</code> — как есть</label>
+    <input type="text" id="f-deeplink" value="yandexbrowser-open-url://{encodedUrl}" />
     <p class="sub">Проверка самой схемы, без пуша: <a id="scheme-test" href="#">тапнуть по deep link'у вручную</a>. Если Яндекс.Браузер не открылся даже отсюда — дело не в пуше, а в самой схеме (или браузер не установлен).</p>
     <div class="checkrow">
       <input type="checkbox" id="f-use-deeplink" checked />
