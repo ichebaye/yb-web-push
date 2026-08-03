@@ -4,6 +4,9 @@ name: Deploy GitHub Pages
 # environment restricts deployments to it anyway, and triggering from other
 # branches too just races the same "pages" concurrency group and cancels the
 # real deploy.
+#
+# Re-trigger: Pages source was switched from "Deploy from a branch" to
+# "GitHub Actions" in Settings, so redeploy through the new source.
 on:
   push:
     branches:
