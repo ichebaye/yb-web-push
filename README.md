@@ -81,9 +81,13 @@ avoids. Hence the one-off CLI command.
    IndexedDB persists and the log viewer reads it back next time you open the
    app.
 
-The Yandex deep-link **format is a field in the UI**
-(`yandexbrowser-open-url://{url}` by default) — it's not officially documented,
-so the form lets you try variants without redeploying.
+The Yandex deep-link **format is a field in the UI**, defaulting to
+`yandexbrowser-open-url://{encodedUrl}`. Yandex Browser expects the target URL
+percent-encoded after the scheme, which is what `{encodedUrl}` produces;
+`{url}` substitutes it verbatim and is there for trying other spellings, since
+the format isn't publicly documented. The encoding survives the trip through
+`redirect.html`'s `deep=` parameter intact (it is encoded once more for
+transport and decoded once by `URLSearchParams`).
 
 ## Testing it
 
@@ -142,7 +146,9 @@ classic path; the declarative one can't be reproduced without a real push.
 **A custom scheme in `navigate` is ignored — but no spec says it has to be.**
 Sending `"navigate": "yandexbrowser-open-url://…"` in a declarative payload
 does not launch Yandex Browser and does not fail visibly: iOS opens the PWA at
-its `start_url` instead.
+its `start_url` instead. Note this was tested with a correctly-formed link —
+`yandexbrowser-open-url://https%3A%2F%2Fya.ru`, percent-encoded as Yandex
+Browser expects — so a malformed deep link does not explain the result.
 
 It is worth being precise about *why*, because the specs do not forbid this
 payload. The WebKit explainer places no restriction on the URL at all (only
